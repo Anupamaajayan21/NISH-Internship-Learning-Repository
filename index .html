@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NISH Internship — MSP430FR4133 Learning Log</title>
+  <style>
+    body {
+      font-family: Georgia, serif;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      background: #fff;
+      color: #222;
+      line-height: 1.8;
+    }
+    h1 { font-size: 1.6rem; border-bottom: 2px solid #222; padding-bottom: .5rem; margin-bottom: .5rem; }
+    h2 { font-size: 1.2rem; margin-top: 2.5rem; border-bottom: 1px solid #ccc; padding-bottom: .3rem; }
+    h3 { font-size: 1rem; margin-top: 1.5rem; margin-bottom: .3rem; }
+    p { margin: .6rem 0; color: #333; }
+    pre {
+      background: #f5f5f5;
+      border-left: 3px solid #999;
+      padding: .75rem 1rem;
+      overflow-x: auto;
+      font-size: .85rem;
+      line-height: 1.7;
+      margin: .75rem 0;
+    }
+    code { font-family: 'Courier New', monospace; font-size: .9em; background: #f0f0f0; padding: 1px 5px; border-radius: 3px; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .9rem; }
+    th { background: #f0f0f0; text-align: left; padding: 7px 10px; border: 1px solid #ccc; }
+    td { padding: 7px 10px; border: 1px solid #ccc; }
+    .note { background: #fffbe6; border-left: 3px solid #e6b800; padding: .6rem 1rem; margin: .75rem 0; font-size: .9rem; }
+    .warn { background: #fff0f0; border-left: 3px solid #cc3333; padding: .6rem 1rem; margin: .75rem 0; font-size: .9rem; }
+    .tip  { background: #f0fff4; border-left: 3px solid #2e8b57; padding: .6rem 1rem; margin: .75rem 0; font-size: .9rem; }
+    ul, ol { padding-left: 1.5rem; }
+    li { margin: .3rem 0; color: #333; }
+    .subtitle { color: #555; font-size: .95rem; margin-bottom: 1.5rem; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; }
+    .toc { background: #f9f9f9; border: 1px solid #ddd; padding: 1rem 1.5rem; margin: 1.5rem 0; font-size: .9rem; }
+    .toc h3 { margin-top: 0; }
+    .toc ol { margin: 0; }
+    .toc a { color: #333; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .status-done { color: #2e8b57; font-weight: bold; }
+    .status-wip  { color: #cc7700; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>NISH Internship — MSP430FR4133 Learning Log</h1>
+<p class="subtitle">
+  A personal record of everything I learned, every mistake I made, and how I fixed them while working with the MSP430FR4133 microcontroller during my internship at NISH.
+  I started with no embedded systems experience, so this is written from that perspective.
+  If you are also a beginner who landed here after hitting a wall, hopefully something here helps.
+</p>
+
+<p><strong>Board:</strong> MSP-EXP430FR4133 &nbsp;|&nbsp; <strong>IDE:</strong> Code Composer Studio Theia &nbsp;|&nbsp; <strong>Language:</strong> C</p>
+
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li><a href="#setup">CCS Installation and First Project</a></li>
+    <li><a href="#syntax">Basic C Syntax Mistakes</a></li>
+    <li><a href="#watchdog">Watchdog Timer Confusion</a></li>
+    <li><a href="#toggle">Toggle LEDs with a Switch</a></li>
+    <li><a href="#lcd">LCD Interface and Display Issues</a></li>
+    <li><a href="#chars">LCD Character Display Issues</a></li>
+    <li><a href="#interrupts">Interrupt Register Order</a></li>
+    <li><a href="#adc">Potentiometer and ADC Configuration</a></li>
+    <li><a href="#ultrasonic">HC-SR04 Ultrasonic Sensor</a></li>
+    <li><a href="#mpu">MPU6050 Accelerometer via I2C</a></li>
+    <li><a href="#sd">microSD Card via SPI</a></li>
+    <li><a href="#counter">Button Counter Project</a></li>
+    <li><a href="#lessons">Key Lessons Learned</a></li>
+    <li><a href="#skeleton">Master Code Skeleton</a></li>
+    <li><a href="#ref">Quick Reference</a></li>
+  </ol>
+</div>
+
+<hr>
+
+<h2>Exercises Completed</h2>
+<table>
+  <tr><th>#</th><th>Exercise</th><th>Main concepts</th><th>Status</th></tr>
+  <tr><td>1</td><td>Blink red LED</td><td>GPIO output, delay, while loop</td><td class="status-done">Done</td></tr>
+  <tr><td>2</td><td>Alternate red and green LEDs</td><td>Multiple GPIO, toggle</td><td class="status-done">Done</td></tr>
+  <tr><td>3</td><td>Button toggle between LEDs</td><td>GPIO input, pull-up, active-low</td><td class="status-done">Done</td></tr>
+  <tr><td>4</td><td>LCD display on button press</td><td>hal_LCD driver, state tracking</td><td class="status-done">Done</td></tr>
+  <tr><td>5</td><td>Potentiometer reading on LCD</td><td>ADC, 12-bit resolution, digit extraction</td><td class="status-done">Done</td></tr>
+  <tr><td>6</td><td>Ultrasonic distance on LCD</td><td>Timer, clock config, HC-SR04</td><td class="status-wip">Done — minor display issue ongoing</td></tr>
+  <tr><td>7</td><td>MPU6050 accelerometer via I2C</td><td>I2C, eUSCI_B0, sleep wake</td><td class="status-done">Done</td></tr>
+  <tr><td>8</td><td>microSD card logging via SPI</td><td>SPI, eUSCI, CMD0, voltage levels</td><td class="status-wip">Done — voltage notes below</td></tr>
+  <tr><td>9</td><td>Button counter saved to SD card</td><td>GPIO + LCD + SPI combined</td><td class="status-done">Done</td></tr>
+</table>
+
+<hr>
+
+<h2 id="setup">1. CCS Installation and First Project</h2>
+
+<p>
+  Before writing any code, I spent quite a bit of time just trying to get CCS working and create a project properly.
+  The first confusion was after selecting an empty project template — there is a loading or buffering screen that appears.
+  I kept waiting for it to do something, but the correct thing to do is click <strong>Import immediately</strong> without waiting for the buffer to finish.
+</p>
+
+<p>
+  The other thing that confused me was that most tutorials and YouTube videos show an older version of CCS called CCS Eclipse.
+  I had CCS Theia installed, which has a completely different interface.
+  The menu path in Theia for creating a project is:
+</p>
+
+<pre>File → Create New Project...</pre>
+
+<p>
+  Not <code>File → New → CCS Project</code> as most older tutorials show.
+  These two lead to different screens and I wasted time trying to find options that simply didn't exist in my version.
+</p>
+
+<p>
+  One more thing — for LCD projects, the files <code>hal_LCD.c</code> and <code>hal_LCD.h</code> are not included in a blank project.
+  I had to manually copy them from the Out-of-Box Experience project that comes with CCS.
+</p>
+
+<hr>
+
+<h2 id="syntax">2. Basic C Syntax Mistakes</h2>
+
+<p>
+  Most of my early errors had nothing to do with the hardware. They were simple C syntax mistakes that I kept making because I was new to the language.
+</p>
+
+<h3>Missing # before include</h3>
+<pre>// Wrong
+include &lt;msp430.h&gt;
+
+// Correct
+#include &lt;msp430.h&gt;</pre>
+
+<h3>Lowercase register and bit names</h3>
+<p>
+  C is case-sensitive. Every register name like <code>P1DIR</code> and every bit name like <code>BIT0</code> must be written in uppercase exactly as defined in the header file.
+  Writing them in lowercase gives an undefined identifier error.
+</p>
+<pre>// Wrong
+p1dir |= bit0;
+wdtctl = wdtpw | wdthold;
+
+// Correct
+P1DIR |= BIT0;
+WDTCTL = WDTPW | WDTHOLD;</pre>
+
+<h3>Missing semicolons</h3>
+<p>
+  Every statement in C ends with a semicolon. I forgot this constantly in the beginning.
+  The annoying part is the compiler sometimes points to the wrong line, making it hard to find.
+</p>
+<pre>// Wrong
+P1DIR |= BIT0
+P1OUT |= BIT0
+
+// Correct
+P1DIR |= BIT0;
+P1OUT |= BIT0;</pre>
+
+<hr>
+
+<h2 id="watchdog">3. Watchdog Timer Confusion</h2>
+
+<p>
+  When I ran the blink LED code for the first time, the debugger started and a yellow arrow appeared on line 5.
+  I thought something had gone wrong. It hadn't — that arrow just means the debugger paused at that line waiting for me to press Continue.
+  I spent a few minutes looking for what the error was before realising there was no error at all.
+  The Continue button is the triangle play button in the debug toolbar at the top left.
+</p>
+
+<p>
+  Separately, when I forgot to include the watchdog timer line, the LED did absolutely nothing.
+  No error message, no warning — the chip was just silently resetting itself every 32 milliseconds because of the watchdog.
+</p>
+
+<p>
+  These two lines need to be at the top of every single program I write:
+</p>
+
+<pre>WDTCTL  = WDTPW | WDTHOLD;   // stop watchdog timer — always line 1
+PM5CTL0 &= ~LOCKLPM5;         // unlock GPIO pins    — always line 2</pre>
+
+<div class="note">
+  The second line, <code>PM5CTL0 &= ~LOCKLPM5</code>, is specific to FR-series chips.
+  Without it, all GPIO pins are locked in high-impedance mode and produce no output even if the rest of the code is correct.
+  This one caused me a lot of confusion before I found out about it.
+</div>
+
+<hr>
+
+<h2 id="toggle">4. Toggle LEDs with a Switch</h2>
+
+<p>
+  When I tried to toggle between the red and green LEDs using the S1 button, I struggled specifically with where the <code>while(1)</code> loop goes and why the button logic felt backwards.
+</p>
+
+<h3>while(1) placed outside main</h3>
+<pre>// Wrong — the while loop is outside main and never runs
+void main(void)
+{
+    P1DIR |= BIT0;
+}
+while(1)
+{
+    P1OUT ^= BIT0;
+}
+
+// Correct — while loop is inside main
+void main(void)
+{
+    P1DIR |= BIT0;
+    while(1)
+    {
+        P1OUT ^= BIT0;
+        __delay_cycles(500000);
+    }
+}</pre>
+
+<h3>Button reads backwards — active-low logic</h3>
+<p>
+  The button uses a pull-up resistor, which means the pin reads HIGH (1) when the button is not pressed
+  and LOW (0) when it is pressed. This is the opposite of what I expected.
+  So to detect a press, the condition needs the NOT operator:
+</p>
+<pre>// Wrong — this is true when button is RELEASED
+if (P1IN & BIT2)
+
+// Correct — this is true when button is PRESSED
+if (!(P1IN & BIT2))</pre>
+
+<p>The full button setup needs three lines:</p>
+<pre>P1DIR &= ~BIT2;   // set as input
+P1REN |= BIT2;    // enable internal resistor
+P1OUT |= BIT2;    // configure as pull-up</pre>
+
+<hr>
+
+<h2 id="lcd">5. LCD Interface and Display Issues</h2>
+
+<p>
+  The LCD was the most difficult part of the whole learning process. I hit several different problems one after another.
+</p>
+
+<h3>Problem 1 — Undefined register names</h3>
+<p>
+  My first LCD attempts used examples copied from other MSP430 devices.
+  They failed to compile because register names like <code>P5SEL1</code>, <code>LCDMUX_3</code>, <code>VLCD_30</code>, <code>LCDCLR</code>, and <code>LCDPRE_5</code> simply do not exist on the FR4133.
+  The fix was to stop using other device examples and instead use the <code>hal_LCD.c</code> and <code>hal_LCD.h</code> files from the FR4133 Out-of-Box Experience project.
+  After that, everything came down to three functions:
+</p>
+<pre>Init_LCD();
+clearLCD();
+showChar('A', pos1);</pre>
+
+<h3>Problem 2 — Digits fading, last digit invisible</h3>
+<p>
+  After getting the LCD working, pressing the button showed digits 1 to 6 but they faded from left to right.
+  Digit 6 was barely visible or completely gone.
+  I initially thought it was a hardware issue with the LCD itself.
+</p>
+<p>
+  The actual cause was that <code>clearLCD()</code> was being called every single loop pass.
+  The loop runs thousands of times per second, so the display was being wiped before it had time to fully show anything.
+  Digit 6 was especially bad because it was the last one written before the loop restarted.
+</p>
+<p>The fix was to only update the LCD when the button state actually changes:</p>
+<pre>unsigned char lastState = 0;
+
+while(1)
+{
+    if (!(P1IN & BIT2))
+    {
+        if (lastState != 1)
+        {
+            clearLCD();
+            showChar('1', pos1);
+            showChar('2', pos2);
+            showChar('3', pos3);
+            showChar('4', pos4);
+            showChar('5', pos5);
+            showChar('6', pos6);
+            lastState = 1;
+        }
+    }
+    else
+    {
+        if (lastState != 0)
+        {
+            clearLCD();
+            lastState = 0;
+        }
+    }
+}</pre>
+
+<hr>
+
+<h2 id="chars">6. LCD Character Display Issues</h2>
+
+<p>
+  Some characters on the LCD looked distorted or not quite right.
+  I also got undefined identifier errors a few times when using position names.
+</p>
+<p>
+  The FR4133 LCD is a 7-segment display, not a pixel screen.
+  Characters are made up of fixed segment combinations defined inside <code>hal_LCD.c</code>.
+  Some letters just do not look great on a 7-segment display — that is a hardware limitation, not a bug.
+</p>
+<p>
+  The position constants <code>pos1</code> through <code>pos6</code> are defined in <code>hal_LCD.h</code> and must be written exactly that way.
+  Wrong casing causes a compile error.
+</p>
+
+<hr>
+
+<h2 id="interrupts">7. Interrupt Register Order</h2>
+
+<p>
+  When learning about GPIO interrupts, my program either fired a spurious interrupt at startup without any button press,
+  or it never responded to button presses at all.
+  The problem was the order in which I configured the interrupt registers.
+</p>
+<p>
+  If <code>P1IE</code> is enabled before <code>P1IFG</code> is cleared, any stale flag already sitting in the register
+  will trigger an interrupt immediately. The correct order is:
+</p>
+<pre>P1IES |= BIT2;          // 1. choose edge — falling means button press
+P1IFG &= ~BIT2;         // 2. clear any existing stale flag
+P1IE  |= BIT2;          // 3. enable the interrupt
+__bis_SR_register(GIE); // 4. global interrupt enable</pre>
+
+<table>
+  <tr><th>Register</th><th>What it does</th></tr>
+  <tr><td>P1IES</td><td>Choose which edge triggers — falling (1 to 0) or rising (0 to 1)</td></tr>
+  <tr><td>P1IFG</td><td>Flag — gets set when the event happens. Must be cleared manually.</td></tr>
+  <tr><td>P1IE</td><td>Enables or disables the interrupt on that pin</td></tr>
+</table>
+
+<hr>
+
+<h2 id="adc">8. Potentiometer and ADC Configuration</h2>
+
+<p>
+  I connected a potentiometer to P1.3 and tried to display the reading on the LCD.
+  The code compiled and ran, but the output only went from 0 to 255 instead of the expected range.
+</p>
+
+<h3>Wrong resolution constant</h3>
+<p>
+  I was using <code>ADCRES_2</code> which does not exist on the FR4133.
+  The chip silently fell back to 8-bit mode with no error or warning.
+</p>
+<pre>// Wrong — ADCRES_2 does not exist on FR4133
+ADCCTL2 = ADCRES_2;
+
+// Correct — use ADCRES1 for 12-bit on FR4133
+ADCCTL2 = ADCRES1;    // gives range 0 to 4095</pre>
+
+<h3>P1SEL1 undefined error</h3>
+<pre>// Wrong — P1SEL1 does not exist on FR4133
+P1SEL0 |= BIT3;
+P1SEL1 |= BIT3;
+
+// Correct — P1SEL0 alone is enough
+P1SEL0 |= BIT3;</pre>
+
+<h3>ADC configuration being ignored</h3>
+<p>
+  Some configuration changes were not taking effect.
+  The MSP430 requires <code>ADCENC</code> to be cleared before any ADC registers can be written.
+  If it is already set, the chip silently ignores the writes.
+</p>
+<pre>ADCCTL0 &= ~ADCENC;          // must disable before configuring
+ADCCTL0  = ADCSHT_2 | ADCON;
+ADCCTL1  = ADCSHP;
+ADCCTL2  = ADCRES1;
+ADCMCTL0 = ADCINCH_3;</pre>
+
+<hr>
+
+<h2 id="ultrasonic">9. HC-SR04 Ultrasonic Sensor</h2>
+
+<p>
+  This was my first attempt at connecting an external sensor. Several problems appeared one after another.
+</p>
+
+<h3>Problem 1 — Red LED faintly blinking, garbage readings</h3>
+<p>
+  The readings were completely wrong and the red LED was faintly flickering in the background.
+  The timer was not running at the expected speed because the clock was not configured explicitly.
+  I had assumed a default frequency which turned out to be wrong.
+  The fix was to set the clock explicitly before any timer code:
+</p>
+<pre>__bis_SR_register(SCG0);
+CSCTL0 = 0;
+CSCTL1 = DCOFSEL_0;
+CSCTL2 = SELA__VLOCLK | SELM__DCOCLK | SELS__DCOCLK;
+CSCTL3 = DIVA__1 | DIVM__1 | DIVS__1;
+__bic_SR_register(SCG0);</pre>
+
+<h3>Problem 2 — Echo pin stuck HIGH constantly</h3>
+<p>
+  After fixing the clock the echo pin was still reading HIGH all the time.
+  I tried adjusting delays and adding debug output but nothing changed.
+  The actual cause turned out to be the wiring.
+</p>
+
+<h3>Problem 3 — Wires connected to wrong pins (root cause)</h3>
+<p>
+  The TRIG and ECHO wires were physically plugged into different pins than what the code was using.
+  The echo pin was floating — not connected to anything — so it read HIGH randomly.
+  Once I matched the physical wires to the pin numbers in the code, the sensor worked correctly.
+</p>
+<pre>// Code defined these pins — physical wires must match
+#define TRIG_PIN  BIT4    // P1.4
+#define ECHO_PIN  BIT5    // P1.5</pre>
+
+<div class="warn">
+  When sensor output is completely wrong, check the physical wiring before changing any code.
+  This saved me a lot of time once I learned it.
+</div>
+
+<h3>Problem 4 — Last two LCD digits showing all segments lit</h3>
+<p>
+  Positions pos5 and pos6 were showing a fully-lit block character instead of being blank.
+  They had never been written to, so they held leftover values in LCD memory.
+  The fix was to always write all six positions and use a space character for the unused ones.
+</p>
+<pre>showChar(' ', pos5);
+showChar(' ', pos6);
+
+// If the space character does not fully blank them
+LCDM10 = 0x00;
+LCDM12 = 0x00;</pre>
+
+<div class="note">The all-segments issue on pos5 and pos6 is still being looked into. The space character fix works most of the time.</div>
+
+<hr>
+
+<h2 id="mpu">10. MPU6050 Accelerometer via I2C</h2>
+
+<p>
+  This was my first time working with I2C on the MSP430. The MPU6050 module was labeled HW-290 and I initially assumed it was an analog ADXL335 accelerometer.
+  After reading the markings on the actual chip I found it was an MPU6050 — a digital I2C sensor with both a 3-axis accelerometer and a 3-axis gyroscope.
+</p>
+
+<h3>Problem 1 — I2C register names undefined</h3>
+<p>
+  Compilation failed because register names I found in examples were not available on the FR4133.
+  The FR4133 uses eUSCI_B0 for I2C and the register names are different from what many online examples show.
+</p>
+<pre>// Direct register access needed for FR4133
+#define UCB1CTL1_REG  (*((volatile unsigned int *) 0x0640))
+#define UCB1BR0       (*((volatile unsigned int *) 0x0644))
+#define UCB1IFG_R     (*((volatile unsigned int *) 0x066C))</pre>
+
+<h3>Problem 2 — Sensor always returns X=0, Y=0, Z=0</h3>
+<p>
+  Even after getting I2C communication working, all three axes returned zero.
+  The MPU6050 boots in sleep mode by default and will not return any data until it is explicitly woken up.
+</p>
+<pre>// Wake the sensor before reading anything
+I2C_WriteReg(MPU_ADDR, PWR_MGMT_1, 0x00);
+__delay_cycles(100000);</pre>
+
+<h3>Problem 3 — SDA and SCL connected to wrong pins</h3>
+<p>
+  The sensor did not respond even after fixing the code.
+  I had connected the wires to pins labelled I2C on the board silkscreen,
+  but the software was configured to use eUSCI_B0 which maps to different physical pins.
+  Checking the actual datasheet pinout diagram fixed this.
+</p>
+<pre>// FR4133 eUSCI_B0 I2C pins — verify from datasheet, not silkscreen
+// P1.6 = UCB0SDA
+// P1.7 = UCB0SCL</pre>
+
+<div class="note">
+  On MSP430 devices, a pin can serve multiple functions depending on how it is configured in software.
+  The same pins that work for SPI can also work for I2C if the eUSCI module is configured differently.
+  The board silkscreen only shows one label per pin so it can be misleading.
+</div>
+
+<hr>
+
+<h2 id="sd">11. microSD Card via SPI</h2>
+
+<p>
+  The SD card interface was one of the more involved exercises. Multiple things went wrong before it worked.
+</p>
+
+<h3>Problem 1 — Wrong SPI pins</h3>
+<p>
+  The card did not respond at all during initialization. I had assumed pin locations without checking the datasheet first.
+  After verifying against the FR4133 pinout:
+</p>
+<pre>P5.0 → CS
+P5.1 → SCLK
+P5.2 → MOSI
+P5.3 → MISO</pre>
+
+<h3>Problem 2 — SPI peripheral mismatch</h3>
+<p>
+  After fixing the pins, communication still failed. The initialization code was setting up UCB1 but the data transfer functions were using UCB0.
+  These are two different hardware peripherals so the data never actually went anywhere.
+  Making sure both used the same peripheral fixed it.
+</p>
+
+<h3>Problem 3 — Program hanging inside SPI transfer</h3>
+<p>
+  The LCD showed nothing and the program stopped responding.
+  The code was waiting inside the SPI transfer function for a response that never came, caused by the peripheral mismatch above.
+</p>
+
+<h3>Problem 4 — CMD0 not responding, LCD showing FAIL or RSP00</h3>
+<p>
+  After fixing the peripheral mismatch, the SD card still failed initialization.
+  Several things were investigated — SPI pin config, peripheral selection, startup timing, and supply voltage.
+  The SD module was being powered from 3.3V. When I switched it to 5V, CMD0 responded correctly and initialization completed.
+</p>
+<pre>// SD card module VCC → 5V pin on LaunchPad
+// Many SD adapter modules have onboard regulators designed for 5V input
+// The SD card itself runs at 3.3V internally but the module may need 5V</pre>
+
+<div class="warn">
+  MSP430 GPIO pins are not 5V tolerant. When the SD module runs on 5V, the MISO line can send 5V signals back to the MSP430.
+  A voltage divider is needed on MISO to bring it down to a safe level.
+  <pre style="margin-top:.5rem">SD MISO (5V) → 1kΩ → MSP430 MISO pin
+                   ↓
+                  2kΩ
+                   ↓
+                  GND
+// Result: ~3.3V safe for MSP430</pre>
+</div>
+
+<h3>Problem 5 — SD card needs dummy clocks at startup</h3>
+<p>
+  Even with correct power and pins, initialization was unreliable.
+  SD cards require at least 74 dummy clock pulses before CMD0 to properly enter SPI mode.
+</p>
+<pre>for(int i = 0; i &lt; 10; i++)
+    SPI_Transfer(0xFF);   // 10 x 8 bits = 80 clock pulses</pre>
+
+<h3>Memory constraint — raw write instead of FAT</h3>
+<p>
+  The FR4133 has only 2KB of RAM. A full FAT file system implementation needs a 512-byte sector buffer plus overhead,
+  which risks stack overflow on this chip. I chose a simple raw write approach instead.
+  The data format used was:
+</p>
+<pre>press_count
+1,1
+2,2
+3,3
+...</pre>
+<p>This opens directly in Excel without any conversion needed.</p>
+
+<hr>
+
+<h2 id="counter">12. Button Counter Project</h2>
+
+<p>
+  This was the final project combining everything learned up to this point.
+  Pressing S1 increments a counter, displays the current count on the LCD, and writes each press to the SD card immediately.
+</p>
+<p>
+  The SD stuck or RSP00 issue that appeared during the SD card exercise was always caused by the supply voltage.
+  After making sure the SD module was on 5V, the CMD0 response was reliable.
+</p>
+<p>Data saved to card:</p>
+<pre>press_count
+1,1
+2,2
+3,3
+4,4</pre>
+
+<hr>
+
+<h2 id="lessons">13. Key Lessons Learned</h2>
+
+<p>These are the things that came up repeatedly and took me a while to understand properly.</p>
+
+<h3>Always verify pins from the datasheet, not the silkscreen</h3>
+<p>
+  The labels printed on the board are a rough guide only.
+  For any peripheral — SPI, I2C, UART — I always cross-checked the actual pin function using the MSP430FR4133 datasheet
+  and the LaunchPad schematic. This saved a lot of debugging time once I made it a habit.
+</p>
+
+<h3>Pin multiplexing — one pin, multiple functions</h3>
+<p>
+  The same physical pin can be SPI or I2C depending on how the eUSCI module is configured in software.
+  This caught me off guard a few times.
+</p>
+<pre>P5.2 → UCB0SIMO  (when configured as SPI)
+P5.2 → UCB0SDA   (when configured as I2C)</pre>
+
+<h3>Voltage levels matter</h3>
+<table>
+  <tr><th>Component</th><th>Supply</th><th>Safe for MSP430?</th></tr>
+  <tr><td>MPU6050</td><td>3.3V</td><td>Yes</td></tr>
+  <tr><td>HC-SR04</td><td>5V</td><td>Level shifting needed on ECHO</td></tr>
+  <tr><td>SD card module</td><td>5V</td><td>Voltage divider needed on MISO</td></tr>
+</table>
+
+<h3>Check hardware before rewriting code</h3>
+<p>
+  Multiple times I spent hours adjusting code when the actual problem was a loose wire or a wire in the wrong hole.
+  Now I always verify the physical connections first if something is completely not working.
+</p>
+
+<h3>Test each part separately</h3>
+<p>
+  Instead of building the full system and testing it all at once, verifying each piece independently made debugging much faster.
+  Sensor first, then communication, then display, then storage, then integration.
+</p>
+
+<hr>
+
+<h2 id="skeleton">14. Master Code Skeleton</h2>
+
+<p>Every program I wrote started with this structure:</p>
+
+<pre>#include &lt;msp430.h&gt;
+
+void main(void)
+{
+    WDTCTL  = WDTPW | WDTHOLD;   // 1. stop watchdog   — always first
+    PM5CTL0 &= ~LOCKLPM5;        // 2. unlock GPIO pins — always second
+
+    // 3. configure pins
+    //    output:  PxDIR |= BITx
+    //    input:   PxDIR &= ~BITx;  PxREN |= BITx;  PxOUT |= BITx
+    //    analog:  PxSEL0 |= BITx
+
+    // 4. configure peripherals
+
+    while(1)
+    {
+        // 5. main logic
+    }
+}</pre>
+
+<hr>
+
+<h2 id="ref">15. Quick Reference</h2>
+
+<h3>Bit operations</h3>
+<table>
+  <tr><th>Operation</th><th>Syntax</th><th>Use for</th></tr>
+  <tr><td>Set bit to 1</td><td><code>reg |= BITx</code></td><td>Turn on, enable</td></tr>
+  <tr><td>Clear bit to 0</td><td><code>reg &amp;= ~BITx</code></td><td>Turn off, set as input</td></tr>
+  <tr><td>Toggle bit</td><td><code>reg ^= BITx</code></td><td>Blink, flip state</td></tr>
+  <tr><td>Read bit</td><td><code>reg &amp; BITx</code></td><td>Check button, check flag</td></tr>
+</table>
+
+<h3>Common FR4133 mistakes</h3>
+<table>
+  <tr><th>Issue</th><th>Wrong</th><th>Correct</th></tr>
+  <tr><td>GPIO unlock</td><td>Missing</td><td><code>PM5CTL0 &amp;= ~LOCKLPM5</code></td></tr>
+  <tr><td>Register names</td><td>p1dir, bit0</td><td>P1DIR, BIT0</td></tr>
+  <tr><td>Button direction</td><td>P1DIR |= BIT2</td><td>P1DIR &amp;= ~BIT2</td></tr>
+  <tr><td>Button pressed check</td><td>if (P1IN &amp; BIT2)</td><td>if (!(P1IN &amp; BIT2))</td></tr>
+  <tr><td>Analog pin</td><td>P1SEL1 |= BIT3</td><td>P1SEL0 |= BIT3 only</td></tr>
+  <tr><td>12-bit ADC</td><td>ADCRES_2</td><td>ADCRES1</td></tr>
+  <tr><td>ADC config</td><td>Config while enabled</td><td>ADCCTL0 &amp;= ~ADCENC first</td></tr>
+  <tr><td>LCD unused digits</td><td>Leave unwritten</td><td>showChar(' ', pos5) or LCDM10 = 0x00</td></tr>
+</table>
+
+<hr>
+<p style="color:#888;font-size:.85rem;">
+  Board: MSP-EXP430FR4133 &nbsp;|&nbsp; IDE: Code Composer Studio Theia &nbsp;|&nbsp; Language: C<br>
+  NISH Internship Learning Repository &nbsp;|&nbsp; Documentation written with assistance from Claude (Anthropic)
+</p>
+
+</body>
+</html>
